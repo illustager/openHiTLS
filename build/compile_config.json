@@ -1,0 +1,8 @@
+{
+    "compileFlag": {
+        "CC_USER_DEFINE_FLAGS": {
+            "CC_FLAGS_ADD": []
+        }
+    },
+    "linkFlag": {}
+}

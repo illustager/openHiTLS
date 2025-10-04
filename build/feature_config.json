@@ -1,0 +1,48 @@
+{
+    "endian": "little",
+    "libType": [
+        "shared",
+        "static"
+    ],
+    "asmType": "no_asm",
+    "libs": {
+        "hitls_bsl": {
+            "c": [
+                "asn1",
+                "err",
+                "hash",
+                "init",
+                "list",
+                "obj",
+                "params",
+                "print",
+                "sal",
+                "sal_dl",
+                "sal_str",
+                "sal_time",
+                "uio_plt"
+            ]
+        },
+        "hitls_crypto": {
+            "c": [
+                "bn",
+                "cipher",
+                "codecs",
+                "codecskey",
+                "drbg",
+                "eal",
+                "ealinit",
+                "entropy",
+                "hpke",
+                "kdf",
+                "mac",
+                "md",
+                "modes",
+                "pkey",
+                "provider"
+            ]
+        }
+    },
+    "system": "linux",
+    "bits": 64
+}
