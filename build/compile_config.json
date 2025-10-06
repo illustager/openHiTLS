@@ -1,7 +1,9 @@
 {
     "compileFlag": {
         "CC_USER_DEFINE_FLAGS": {
-            "CC_FLAGS_ADD": []
+            "CC_FLAGS_ADD": [
+                "-DHITLS_CRYPTO_SM4_PARALLEL"
+            ]
         }
     },
     "linkFlag": {}
