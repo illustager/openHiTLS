@@ -604,7 +604,7 @@ static uint32_t GetCacheLineSize(void) {
 	return 64; // default value
 }
 
-static void PreloadTablesForCacheProtection(void) {    
+static void PreloadENCTablesForCacheProtection(void) {    
     uint32_t cacheLineSize = GetCacheLineSize();
     volatile uint32_t u = 0;
     uint32_t i;
@@ -622,7 +622,20 @@ static void PreloadTablesForCacheProtection(void) {
         u &= *(const volatile uint32_t *)((const volatile uint8_t *)TE3 + i);
     }
     
-    for (i = 0; i < sizeof(TD0); i += cacheLineSize) {
+    u &= TE0[255];
+    u &= TE1[255];
+    u &= TE2[255];
+    u &= TE3[255];
+    
+    (void)u;
+}
+
+static void PreloadDECTablesForCacheProtection(void) {
+    uint32_t cacheLineSize = GetCacheLineSize();
+    volatile uint32_t u = 0;
+    uint32_t i;
+	
+	for (i = 0; i < sizeof(TD0); i += cacheLineSize) {
         u &= *(const volatile uint32_t *)((const volatile uint8_t *)TD0 + i);
     }
     for (i = 0; i < sizeof(TD1); i += cacheLineSize) {
@@ -638,21 +651,16 @@ static void PreloadTablesForCacheProtection(void) {
     for (i = 0; i < sizeof(INV_S); i += cacheLineSize) {
         u &= *(const volatile uint32_t *)((const volatile uint8_t *)INV_S + i);
     }
-    
-    // 确保所有表元素都被访问过
-    u &= TE0[255];
-    u &= TE1[255];
-    u &= TE2[255];
-    u &= TE3[255];
-    u &= TD0[255];
+
+	u &= TD0[255];
     u &= TD1[255];
     u &= TD2[255];
     u &= TD3[255];
     u &= INV_S[255];
-    
-    // 防止编译器优化掉预加载代码
-    (void)u;
+
+	(void)u;
 }
+
 #endif
 
 static void SetDecryptKeyTbox(CRYPT_AES_Key *ctx)
@@ -817,7 +825,7 @@ void CRYPT_AES_EncryptTbox(const CRYPT_AES_Key *ctx, const uint8_t *in, uint8_t 
     uint32_t c0, c1, c2, c3, t0, t1, t2, t3;
 
 #ifdef HITLS_CRYPTO_AES_TABLES_PRELOAD
-	PreloadTablesForCacheProtection();
+	PreloadENCTablesForCacheProtection();
 #endif
 
     AES_ROUND_INIT(in, c, e);
@@ -890,7 +898,7 @@ void CRYPT_AES_DecryptTbox(const CRYPT_AES_Key *ctx, const uint8_t *in, uint8_t 
     // Initialize p0. The dkey starts from the end of the key.
     
 #ifdef HITLS_CRYPTO_AES_TABLES_PRELOAD
-	PreloadTablesForCacheProtection();
+	PreloadDECTablesForCacheProtection();
 #endif
 
     AES_ROUND_INIT(in, p, d);
