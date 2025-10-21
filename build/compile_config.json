@@ -1,7 +1,14 @@
 {
     "compileFlag": {
         "CC_USER_DEFINE_FLAGS": {
-            "CC_FLAGS_ADD": []
+            "CC_FLAGS_ADD": [
+                "-DHITLS_CRYPTO_AES_CONSTANT_TIME"
+            ]
+        },
+        "CC_DEFINE_FLAGS": {
+            "CC_FLAGS_DEL": [
+                "-DHITLS_CRYPTO_AES_PRECALC_TABLES"
+            ]
         }
     },
     "linkFlag": {}
