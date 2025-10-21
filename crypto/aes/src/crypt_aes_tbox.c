@@ -13,6 +13,10 @@
  * See the Mulan PSL v2 for more details.
  */
 
+// #define HITLS_CRYPTO_AES
+// #define HITLS_CRYPTO_AES_PRECALC_TABLES
+// #define HITLS_CRYPTO_AES_PRECALC_TABLES_PARALLEL
+
 #include "hitls_build.h"
 #ifdef HITLS_CRYPTO_AES
 
@@ -998,123 +1002,107 @@ static const uint8_t TE3_P[16][64] = {
 	}
 };
 
-#define CONCATENATE_TE0_ITEM(Table_index, Byte_index, Item_offset) \
-    item |= \
-    ((uint32_t) (TE0_P[Table_index][Byte_index] \
-    >> Item_offset >> Item_offset & 0x03U)) \
-    << Table_index << Table_index;
-
-uint32_t ReadTE0(uint8_t index)
-{
-    uint32_t item = 0;
+uint32_t ReadTE0(uint8_t index) {
+    register uint32_t item = 0;
     uint8_t Byte_index = index >> 2;
-    uint8_t Item_offset = index & 0x03U;
-    CONCATENATE_TE0_ITEM( 0, Byte_index, Item_offset)
-    CONCATENATE_TE0_ITEM( 1, Byte_index, Item_offset)
-    CONCATENATE_TE0_ITEM( 2, Byte_index, Item_offset)
-    CONCATENATE_TE0_ITEM( 3, Byte_index, Item_offset)
-    CONCATENATE_TE0_ITEM( 4, Byte_index, Item_offset)
-    CONCATENATE_TE0_ITEM( 5, Byte_index, Item_offset)
-    CONCATENATE_TE0_ITEM( 6, Byte_index, Item_offset)
-    CONCATENATE_TE0_ITEM( 7, Byte_index, Item_offset)
-    CONCATENATE_TE0_ITEM( 8, Byte_index, Item_offset)
-    CONCATENATE_TE0_ITEM( 9, Byte_index, Item_offset)
-    CONCATENATE_TE0_ITEM(10, Byte_index, Item_offset)
-    CONCATENATE_TE0_ITEM(11, Byte_index, Item_offset)
-    CONCATENATE_TE0_ITEM(12, Byte_index, Item_offset)
-    CONCATENATE_TE0_ITEM(13, Byte_index, Item_offset)
-    CONCATENATE_TE0_ITEM(14, Byte_index, Item_offset)
-    CONCATENATE_TE0_ITEM(15, Byte_index, Item_offset)
+    uint8_t shift_amount = (index & 0x03U) << 1;
+    
+    // 使用直接内存访问避免重复计算
+    item = ((uint32_t)(TE0_P[0][Byte_index] >> shift_amount & 0x03U)) << 0;
+    item |= ((uint32_t)(TE0_P[1][Byte_index] >> shift_amount & 0x03U)) << 2;
+    item |= ((uint32_t)(TE0_P[2][Byte_index] >> shift_amount & 0x03U)) << 4;
+    item |= ((uint32_t)(TE0_P[3][Byte_index] >> shift_amount & 0x03U)) << 6;
+    item |= ((uint32_t)(TE0_P[4][Byte_index] >> shift_amount & 0x03U)) << 8;
+    item |= ((uint32_t)(TE0_P[5][Byte_index] >> shift_amount & 0x03U)) << 10;
+    item |= ((uint32_t)(TE0_P[6][Byte_index] >> shift_amount & 0x03U)) << 12;
+    item |= ((uint32_t)(TE0_P[7][Byte_index] >> shift_amount & 0x03U)) << 14;
+    item |= ((uint32_t)(TE0_P[8][Byte_index] >> shift_amount & 0x03U)) << 16;
+    item |= ((uint32_t)(TE0_P[9][Byte_index] >> shift_amount & 0x03U)) << 18;
+    item |= ((uint32_t)(TE0_P[10][Byte_index] >> shift_amount & 0x03U)) << 20;
+    item |= ((uint32_t)(TE0_P[11][Byte_index] >> shift_amount & 0x03U)) << 22;
+    item |= ((uint32_t)(TE0_P[12][Byte_index] >> shift_amount & 0x03U)) << 24;
+    item |= ((uint32_t)(TE0_P[13][Byte_index] >> shift_amount & 0x03U)) << 26;
+    item |= ((uint32_t)(TE0_P[14][Byte_index] >> shift_amount & 0x03U)) << 28;
+    item |= ((uint32_t)(TE0_P[15][Byte_index] >> shift_amount & 0x03U)) << 30;
+    
     return item;
 }
 
-#define CONCATENATE_TE1_ITEM(Table_index, Byte_index, Item_offset) \
-    item |= \
-    ((uint32_t) (TE1_P[Table_index][Byte_index] \
-    >> Item_offset >> Item_offset & 0x03U)) \
-    << Table_index << Table_index;
-
-uint32_t ReadTE1(uint8_t index)
-{
-    uint32_t item = 0;
+uint32_t ReadTE1(uint8_t index) {
+    register uint32_t item = 0;
     uint8_t Byte_index = index >> 2;
-    uint8_t Item_offset = index & 0x03U;
-    CONCATENATE_TE1_ITEM( 0, Byte_index, Item_offset)
-    CONCATENATE_TE1_ITEM( 1, Byte_index, Item_offset)
-    CONCATENATE_TE1_ITEM( 2, Byte_index, Item_offset)
-    CONCATENATE_TE1_ITEM( 3, Byte_index, Item_offset)
-    CONCATENATE_TE1_ITEM( 4, Byte_index, Item_offset)
-    CONCATENATE_TE1_ITEM( 5, Byte_index, Item_offset)
-    CONCATENATE_TE1_ITEM( 6, Byte_index, Item_offset)
-    CONCATENATE_TE1_ITEM( 7, Byte_index, Item_offset)
-    CONCATENATE_TE1_ITEM( 8, Byte_index, Item_offset)
-    CONCATENATE_TE1_ITEM( 9, Byte_index, Item_offset)
-    CONCATENATE_TE1_ITEM(10, Byte_index, Item_offset)
-    CONCATENATE_TE1_ITEM(11, Byte_index, Item_offset)
-    CONCATENATE_TE1_ITEM(12, Byte_index, Item_offset)
-    CONCATENATE_TE1_ITEM(13, Byte_index, Item_offset)
-    CONCATENATE_TE1_ITEM(14, Byte_index, Item_offset)
-    CONCATENATE_TE1_ITEM(15, Byte_index, Item_offset)
+    uint8_t shift_amount = (index & 0x03U) << 1;
+    
+    // 使用直接内存访问避免重复计算
+    item = ((uint32_t)(TE1_P[0][Byte_index] >> shift_amount & 0x03U)) << 0;
+    item |= ((uint32_t)(TE1_P[1][Byte_index] >> shift_amount & 0x03U)) << 2;
+    item |= ((uint32_t)(TE1_P[2][Byte_index] >> shift_amount & 0x03U)) << 4;
+    item |= ((uint32_t)(TE1_P[3][Byte_index] >> shift_amount & 0x03U)) << 6;
+    item |= ((uint32_t)(TE1_P[4][Byte_index] >> shift_amount & 0x03U)) << 8;
+    item |= ((uint32_t)(TE1_P[5][Byte_index] >> shift_amount & 0x03U)) << 10;
+    item |= ((uint32_t)(TE1_P[6][Byte_index] >> shift_amount & 0x03U)) << 12;
+    item |= ((uint32_t)(TE1_P[7][Byte_index] >> shift_amount & 0x03U)) << 14;
+    item |= ((uint32_t)(TE1_P[8][Byte_index] >> shift_amount & 0x03U)) << 16;
+    item |= ((uint32_t)(TE1_P[9][Byte_index] >> shift_amount & 0x03U)) << 18;
+    item |= ((uint32_t)(TE1_P[10][Byte_index] >> shift_amount & 0x03U)) << 20;
+    item |= ((uint32_t)(TE1_P[11][Byte_index] >> shift_amount & 0x03U)) << 22;
+    item |= ((uint32_t)(TE1_P[12][Byte_index] >> shift_amount & 0x03U)) << 24;
+    item |= ((uint32_t)(TE1_P[13][Byte_index] >> shift_amount & 0x03U)) << 26;
+    item |= ((uint32_t)(TE1_P[14][Byte_index] >> shift_amount & 0x03U)) << 28;
+    item |= ((uint32_t)(TE1_P[15][Byte_index] >> shift_amount & 0x03U)) << 30;
+    
     return item;
 }
 
-#define CONCATENATE_TE2_ITEM(Table_index, Byte_index, Item_offset) \
-    item |= \
-    ((uint32_t) (TE2_P[Table_index][Byte_index] \
-    >> Item_offset >> Item_offset & 0x03U)) \
-    << Table_index << Table_index;
-
-uint32_t ReadTE2(uint8_t index)
-{
-    uint32_t item = 0;
+uint32_t ReadTE2(uint8_t index) {
+    register uint32_t item = 0;
     uint8_t Byte_index = index >> 2;
-    uint8_t Item_offset = index & 0x03U;
-    CONCATENATE_TE2_ITEM( 0, Byte_index, Item_offset)
-    CONCATENATE_TE2_ITEM( 1, Byte_index, Item_offset)
-    CONCATENATE_TE2_ITEM( 2, Byte_index, Item_offset)
-    CONCATENATE_TE2_ITEM( 3, Byte_index, Item_offset)
-    CONCATENATE_TE2_ITEM( 4, Byte_index, Item_offset)
-    CONCATENATE_TE2_ITEM( 5, Byte_index, Item_offset)
-    CONCATENATE_TE2_ITEM( 6, Byte_index, Item_offset)
-    CONCATENATE_TE2_ITEM( 7, Byte_index, Item_offset)
-    CONCATENATE_TE2_ITEM( 8, Byte_index, Item_offset)
-    CONCATENATE_TE2_ITEM( 9, Byte_index, Item_offset)
-    CONCATENATE_TE2_ITEM(10, Byte_index, Item_offset)
-    CONCATENATE_TE2_ITEM(11, Byte_index, Item_offset)
-    CONCATENATE_TE2_ITEM(12, Byte_index, Item_offset)
-    CONCATENATE_TE2_ITEM(13, Byte_index, Item_offset)
-    CONCATENATE_TE2_ITEM(14, Byte_index, Item_offset)
-    CONCATENATE_TE2_ITEM(15, Byte_index, Item_offset)
+    uint8_t shift_amount = (index & 0x03U) << 1;
+    
+    // 使用直接内存访问避免重复计算
+    item = ((uint32_t)(TE2_P[0][Byte_index] >> shift_amount & 0x03U)) << 0;
+    item |= ((uint32_t)(TE2_P[1][Byte_index] >> shift_amount & 0x03U)) << 2;
+    item |= ((uint32_t)(TE2_P[2][Byte_index] >> shift_amount & 0x03U)) << 4;
+    item |= ((uint32_t)(TE2_P[3][Byte_index] >> shift_amount & 0x03U)) << 6;
+    item |= ((uint32_t)(TE2_P[4][Byte_index] >> shift_amount & 0x03U)) << 8;
+    item |= ((uint32_t)(TE2_P[5][Byte_index] >> shift_amount & 0x03U)) << 10;
+    item |= ((uint32_t)(TE2_P[6][Byte_index] >> shift_amount & 0x03U)) << 12;
+    item |= ((uint32_t)(TE2_P[7][Byte_index] >> shift_amount & 0x03U)) << 14;
+    item |= ((uint32_t)(TE2_P[8][Byte_index] >> shift_amount & 0x03U)) << 16;
+    item |= ((uint32_t)(TE2_P[9][Byte_index] >> shift_amount & 0x03U)) << 18;
+    item |= ((uint32_t)(TE2_P[10][Byte_index] >> shift_amount & 0x03U)) << 20;
+    item |= ((uint32_t)(TE2_P[11][Byte_index] >> shift_amount & 0x03U)) << 22;
+    item |= ((uint32_t)(TE2_P[12][Byte_index] >> shift_amount & 0x03U)) << 24;
+    item |= ((uint32_t)(TE2_P[13][Byte_index] >> shift_amount & 0x03U)) << 26;
+    item |= ((uint32_t)(TE2_P[14][Byte_index] >> shift_amount & 0x03U)) << 28;
+    item |= ((uint32_t)(TE2_P[15][Byte_index] >> shift_amount & 0x03U)) << 30;
+    
     return item;
 }
 
-#define CONCATENATE_TE3_ITEM(Table_index, Byte_index, Item_offset) \
-    item |= \
-    ((uint32_t) (TE3_P[Table_index][Byte_index] \
-    >> Item_offset >> Item_offset & 0x03U)) \
-    << Table_index << Table_index;
-
-uint32_t ReadTE3(uint8_t index)
-{
-    uint32_t item = 0;
+uint32_t ReadTE3(uint8_t index) {
+    register uint32_t item = 0;
     uint8_t Byte_index = index >> 2;
-    uint8_t Item_offset = index & 0x03U;
-    CONCATENATE_TE3_ITEM( 0, Byte_index, Item_offset)
-    CONCATENATE_TE3_ITEM( 1, Byte_index, Item_offset)
-    CONCATENATE_TE3_ITEM( 2, Byte_index, Item_offset)
-    CONCATENATE_TE3_ITEM( 3, Byte_index, Item_offset)
-    CONCATENATE_TE3_ITEM( 4, Byte_index, Item_offset)
-    CONCATENATE_TE3_ITEM( 5, Byte_index, Item_offset)
-    CONCATENATE_TE3_ITEM( 6, Byte_index, Item_offset)
-    CONCATENATE_TE3_ITEM( 7, Byte_index, Item_offset)
-    CONCATENATE_TE3_ITEM( 8, Byte_index, Item_offset)
-    CONCATENATE_TE3_ITEM( 9, Byte_index, Item_offset)
-    CONCATENATE_TE3_ITEM(10, Byte_index, Item_offset)
-    CONCATENATE_TE3_ITEM(11, Byte_index, Item_offset)
-    CONCATENATE_TE3_ITEM(12, Byte_index, Item_offset)
-    CONCATENATE_TE3_ITEM(13, Byte_index, Item_offset)
-    CONCATENATE_TE3_ITEM(14, Byte_index, Item_offset)
-    CONCATENATE_TE3_ITEM(15, Byte_index, Item_offset)
+    uint8_t shift_amount = (index & 0x03U) << 1;
+    
+    // 使用直接内存访问避免重复计算
+    item = ((uint32_t)(TE3_P[0][Byte_index] >> shift_amount & 0x03U)) << 0;
+    item |= ((uint32_t)(TE3_P[1][Byte_index] >> shift_amount & 0x03U)) << 2;
+    item |= ((uint32_t)(TE3_P[2][Byte_index] >> shift_amount & 0x03U)) << 4;
+    item |= ((uint32_t)(TE3_P[3][Byte_index] >> shift_amount & 0x03U)) << 6;
+    item |= ((uint32_t)(TE3_P[4][Byte_index] >> shift_amount & 0x03U)) << 8;
+    item |= ((uint32_t)(TE3_P[5][Byte_index] >> shift_amount & 0x03U)) << 10;
+    item |= ((uint32_t)(TE3_P[6][Byte_index] >> shift_amount & 0x03U)) << 12;
+    item |= ((uint32_t)(TE3_P[7][Byte_index] >> shift_amount & 0x03U)) << 14;
+    item |= ((uint32_t)(TE3_P[8][Byte_index] >> shift_amount & 0x03U)) << 16;
+    item |= ((uint32_t)(TE3_P[9][Byte_index] >> shift_amount & 0x03U)) << 18;
+    item |= ((uint32_t)(TE3_P[10][Byte_index] >> shift_amount & 0x03U)) << 20;
+    item |= ((uint32_t)(TE3_P[11][Byte_index] >> shift_amount & 0x03U)) << 22;
+    item |= ((uint32_t)(TE3_P[12][Byte_index] >> shift_amount & 0x03U)) << 24;
+    item |= ((uint32_t)(TE3_P[13][Byte_index] >> shift_amount & 0x03U)) << 26;
+    item |= ((uint32_t)(TE3_P[14][Byte_index] >> shift_amount & 0x03U)) << 28;
+    item |= ((uint32_t)(TE3_P[15][Byte_index] >> shift_amount & 0x03U)) << 30;
+    
     return item;
 }
 
