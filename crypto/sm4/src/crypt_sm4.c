@@ -213,13 +213,52 @@ static const uint32_t XBOX_3[] = {
         CRYPT_SM4_ROUND((t), (x3), (x0), (x1), (x2), (roundKey)[(i) + 0], sbox);  \
     }
 
+#ifdef HITLS_CRYPTO_SM4_TABLES_PRELOAD
+static void SM4_PreloadTables(void)
+{
+    size_t cacheLineSize = 64;
+    
+    volatile uint32_t dummy = 0;
+    const uint32_t *tables[] = {XBOX_0, XBOX_1, XBOX_2, XBOX_3};
+    const size_t tableSize = 256; // 每个表有256个元素
+    
+    for (int t = 0; t < 4; t++) {
+        const uint32_t *table = tables[t];
+        for (size_t i = 0; i < tableSize; i += cacheLineSize / sizeof(uint32_t)) {
+            dummy ^= table[i];
+        }
+    }
+    
+    // 确保编译器不会优化掉上面的循环
+    (void)dummy;
+    
+    // 内存屏障，确保预加载完成
+    #if defined(__GNUC__)
+    __asm__ __volatile__ ("" : : : "memory");
+    #endif
+}
+#endif // HITLS_CRYPTO_SM4_TABLES_PRELOAD
+
 /* enc is true: encrypt, enc is false: decrypt */
 static void SM4_Crypt(uint8_t *out, const uint8_t *in, const uint32_t *rk, uint32_t x[5], bool enc)
 {
+#ifdef HITLS_CRYPTO_SM4_TABLES_PRELOAD
+    SM4_PreloadTables();
+#endif // HITLS_CRYPTO_SM4_TABLES_PRELOAD
+
     x[0] = GET_UINT32_BE(in, 0);  // x[0]: 4 bytes starting from index 0 of the in
     x[1] = GET_UINT32_BE(in, 4);  // x[1]: 4 bytes starting from index 4 of the in
     x[2] = GET_UINT32_BE(in, 8);  // x[2]: 4 bytes starting from index 8 of the in
     x[3] = GET_UINT32_BE(in, 12); // x[3]: 4 bytes starting from index 12 of the in
+
+#ifdef HITLS_CRYPTO_SM4_TABLES_PRELOAD
+	volatile uint32_t protection_var = 0;
+    protection_var ^= XBOX_0[0] ^ XBOX_0[255];
+    protection_var ^= XBOX_1[0] ^ XBOX_1[255];
+    protection_var ^= XBOX_2[0] ^ XBOX_2[255];
+    protection_var ^= XBOX_3[0] ^ XBOX_3[255];
+    (void)protection_var;
+#endif // HITLS_CRYPTO_SM4_TABLES_PRELOAD
 
     /* Round function */
     if (enc) {
@@ -227,6 +266,13 @@ static void SM4_Crypt(uint8_t *out, const uint8_t *in, const uint32_t *rk, uint3
     } else {
         DEC_ROUND_FUNCTION(x[4], x[0], x[1], x[2], x[3], rk, XBOX);  // Decryption
     }
+
+#ifdef HITLS_CRYPTO_SM4_TABLES_PRELOAD
+    /* 时序攻击防护：在计算完成后，再次访问表项以平衡缓存访问模式 */
+    volatile uint32_t post_protection = 0;
+    post_protection ^= XBOX_0[128] ^ XBOX_1[128] ^ XBOX_2[128] ^ XBOX_3[128];
+    (void)post_protection;
+#endif // HITLS_CRYPTO_SM4_TABLES_PRELOAD
 
     /* Reverse R(X32 X33 X34 X35) = (X35 X34 X33 X32) */
     PUT_UINT32_BE(x[3], out, 0);  // x[3] put into the 4 bytes starting from index 0 of the out
@@ -249,8 +295,19 @@ static int32_t CRYPT_SM4_Crypt(CRYPT_SM4_Ctx *ctx, const uint8_t *in, uint8_t *o
 
     uint32_t x[5];          // Used as a temporary variable.
     uint32_t blocks = length / CRYPT_SM4_BLOCKSIZE;
+    
+#ifdef HITLS_CRYPTO_SM4_TABLES_PRELOAD
+    SM4_PreloadTables();
+#endif // HITLS_CRYPTO_SM4_TABLES_PRELOAD
+    
     for (uint32_t i = 0; i < blocks; i++) {
         SM4_Crypt(out + i * CRYPT_SM4_BLOCKSIZE, in + i * CRYPT_SM4_BLOCKSIZE, ctx->rk, x, enc);
+
+#ifdef HITLS_CRYPTO_SM4_TABLES_PRELOAD
+        if ((i % 8) == 0) {
+            SM4_PreloadTables();
+        }
+#endif // HITLS_CRYPTO_SM4_TABLES_PRELOAD
     }
 
     if (!enc) {

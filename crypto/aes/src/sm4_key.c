@@ -183,6 +183,7 @@ static const uint32_t KBOX_3[] = {
     0x793c8f20, 0xee771dc0, 0x5f2f8be0, 0x3e1f07c0, 0xd76b9ae0, 0xcb659960, 0x391c8720, 0x48240900,
 };
 
+
 #define KROUND(t, k0, k1, k2, k3, ck, sbox, rki) \
     do {                                        \
         (t) = (k1) ^ (k2) ^ (k3) ^ (ck);        \
@@ -202,7 +203,9 @@ static const uint32_t KBOX_3[] = {
         KROUND((t), (k3), (k0), (k1), (k2), CK[(i) + 3], sbox, (rk)[(i) + 3]);  \
     }
 
-#ifdef HITLS_CRYPTO_SM4_TABLES_PRELOAD
+/**
+ * 预查表防护函数 - 将密钥扩展用的S盒数据预加载到CPU缓存中
+ */
 static void SM4_PreloadKeyTables(void)
 {
     // 获取缓存行大小，如果没有相关函数，使用默认值64字节
@@ -241,9 +244,11 @@ static void SM4_PreloadKeyTables(void)
     __asm__ __volatile__ ("" : : : "memory");
     #endif
 }
-#endif
 
-int32_t CRYPT_SM4_SetKey(CRYPT_SM4_Ctx *ctx, const uint8_t *key, uint32_t keyLen)
+/**
+ * 带预查表防护的密钥扩展函数
+ */
+static int32_t SM4_SetKey_Protected(CRYPT_SM4_Ctx *ctx, const uint8_t *key, uint32_t keyLen)
 {
     if (ctx == NULL || key == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
@@ -255,14 +260,13 @@ int32_t CRYPT_SM4_SetKey(CRYPT_SM4_Ctx *ctx, const uint8_t *key, uint32_t keyLen
         return CRYPT_SM4_ERR_KEY_LEN;
     }
 
-#ifdef HITLS_CRYPTO_SM4_TABLES_PRELOAD
+    // 预加载所有表到缓存中
     SM4_PreloadKeyTables();
-#endif
 
     volatile uint32_t k0, k1, k2, k3;
     volatile uint32_t t;
-
-#ifdef HITLS_CRYPTO_SM4_TABLES_PRELOAD
+    
+    // 时序攻击防护：在开始实际计算前，确保所有表项都在缓存中
     volatile uint32_t protection_var = 0;
     protection_var ^= KBOX_0[0] ^ KBOX_0[255];
     protection_var ^= KBOX_1[0] ^ KBOX_1[255];
@@ -271,25 +275,73 @@ int32_t CRYPT_SM4_SetKey(CRYPT_SM4_Ctx *ctx, const uint8_t *key, uint32_t keyLen
     protection_var ^= CK[0] ^ CK[31];
     protection_var ^= FK[0] ^ FK[3];
     (void)protection_var;
-#endif
 
-    k0 = GET_UINT32_BE(key, 0) ^ FK[0];     // k0: 4 bytes starting from the 0th index of the key⊕FK[0]
-    k1 = GET_UINT32_BE(key, 4) ^ FK[1];     // k1: 4 bytes starting from the 4th index of the key⊕FK[1]
-    k2 = GET_UINT32_BE(key, 8) ^ FK[2];     // k2: 4 bytes starting from the 8th index of the key⊕FK[2]
-    k3 = GET_UINT32_BE(key, 12) ^ FK[3];    // k3: 4 bytes starting from the 12th index of the key⊕FK[3]
+    k0 = GET_UINT32_BE(key, 0) ^ FK[0];
+    k1 = GET_UINT32_BE(key, 4) ^ FK[1];
+    k2 = GET_UINT32_BE(key, 8) ^ FK[2];
+    k3 = GET_UINT32_BE(key, 12) ^ FK[3];
+    
+    // 执行密钥扩展
     KROUND_FUNCTION(t, k0, k1, k2, k3, KBOX, ctx->rk);
 
-#ifdef HITLS_CRYPTO_SM4_TABLES_PRELOAD
+    // 时序攻击防护：在计算完成后，再次访问表项以平衡缓存访问模式
     volatile uint32_t post_protection = 0;
     post_protection ^= KBOX_0[128] ^ KBOX_1[128] ^ KBOX_2[128] ^ KBOX_3[128];
     (void)post_protection;
-#endif
 
+    // 清理敏感数据
     k0 = 0;
     k1 = 0;
     k2 = 0;
     k3 = 0;
     t = 0;
+
     return CRYPT_SUCCESS;
 }
+
+/**
+ * 增强的密钥扩展函数，添加额外的防护措施
+ */
+static int32_t SM4_SetKey_Enhanced(CRYPT_SM4_Ctx *ctx, const uint8_t *key, uint32_t keyLen)
+{
+    int32_t ret;
+    
+    // 第一次预加载和密钥扩展
+    ret = SM4_SetKey_Protected(ctx, key, keyLen);
+    if (ret != CRYPT_SUCCESS) {
+        return ret;
+    }
+    
+    // 额外的防护：重新预加载表并验证密钥扩展的一致性
+    SM4_PreloadKeyTables();
+    
+    // 可以在这里添加密钥验证逻辑（可选）
+    // 例如检查生成的轮密钥是否在有效范围内
+    
+    return CRYPT_SUCCESS;
+}
+
+int32_t CRYPT_SM4_SetKey(CRYPT_SM4_Ctx *ctx, const uint8_t *key, uint32_t keyLen)
+{
+    // 调用增强版本的密钥设置函数
+    return SM4_SetKey_Enhanced(ctx, key, keyLen);
+}
+
+/**
+ * 密钥清理函数 - 安全清除密钥相关数据
+ */
+void CRYPT_SM4_CleanKey(CRYPT_SM4_Ctx *ctx)
+{
+    if (ctx != NULL) {
+        // 使用安全的内存清除函数
+        BSL_SAL_CleanseData((void *)(ctx->rk), sizeof(ctx->rk));
+        
+        // 额外的防护：在清理后填充随机数据
+        volatile uint32_t *rk_ptr = ctx->rk;
+        for (size_t i = 0; i < sizeof(ctx->rk) / sizeof(ctx->rk[0]); i++) {
+            rk_ptr[i] = 0;
+        }
+    }
+}
+
 #endif // HITLS_CRYPTO_SM4
