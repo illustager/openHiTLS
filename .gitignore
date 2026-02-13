@@ -7,8 +7,3 @@ testcode/output/
 platform/*
 .DS_Store
 testcode/testdata/provider/path*
-
-!build/
-build/*
-!build/feature_config.json
-!build/compile_config.json
