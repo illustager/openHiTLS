@@ -974,7 +974,8 @@
                     "no_asm":[
                         "crypto/aes/src/crypt_aes.c",
                         "crypto/aes/src/crypt_aes_sbox.c",
-                        "crypto/aes/src/crypt_aes_tbox.c"
+                        "crypto/aes/src/crypt_aes_tbox.c",
+						"crypto/aes/src/crypt_aes_constant_time.c"
                     ],
                     "public": "crypto/aes/src/crypt_aes_setkey.c",
                     "armv8":[

@@ -23,6 +23,8 @@
 #include "bsl_sal.h"
 #ifdef HITLS_CRYPTO_AES_PRECALC_TABLES
 #include "crypt_aes_tbox.h"
+#elif defined(HITLS_CRYPTO_AES_CONSTANT_TIME)
+#include "crypt_aes_constant_time.h"
 #else
 #include "crypt_aes_sbox.h"
 #endif
@@ -33,6 +35,8 @@ void SetEncryptKey128(CRYPT_AES_Key *ctx, const uint8_t *key)
     ctx->rounds = 10;  // 10 rounds
 #ifdef HITLS_CRYPTO_AES_PRECALC_TABLES
     SetAesKeyExpansionTbox(ctx, CRYPT_AES_128, key, true);
+#elif defined(HITLS_CRYPTO_AES_CONSTANT_TIME)
+	SetAesKeyExpansionConstantTime(ctx, CRYPT_AES_128, key, true);
 #else
     SetAesKeyExpansionSbox(ctx, CRYPT_AES_128, key);
 #endif
@@ -43,6 +47,8 @@ void SetEncryptKey192(CRYPT_AES_Key *ctx, const uint8_t *key)
     ctx->rounds = 12;  // 12 rounds
 #ifdef HITLS_CRYPTO_AES_PRECALC_TABLES
     SetAesKeyExpansionTbox(ctx, CRYPT_AES_192, key, true);
+#elif defined(HITLS_CRYPTO_AES_CONSTANT_TIME)
+	SetAesKeyExpansionConstantTime(ctx, CRYPT_AES_192, key, true);
 #else
     SetAesKeyExpansionSbox(ctx, CRYPT_AES_192, key);
 #endif
@@ -53,6 +59,8 @@ void SetEncryptKey256(CRYPT_AES_Key *ctx, const uint8_t *key)
     ctx->rounds = 14;  // 14 rounds
 #ifdef HITLS_CRYPTO_AES_PRECALC_TABLES
     SetAesKeyExpansionTbox(ctx, CRYPT_AES_256, key, true);
+#elif defined(HITLS_CRYPTO_AES_CONSTANT_TIME)
+	SetAesKeyExpansionConstantTime(ctx, CRYPT_AES_256, key, true);
 #else
     SetAesKeyExpansionSbox(ctx, CRYPT_AES_256, key);
 #endif
@@ -63,6 +71,8 @@ void SetDecryptKey128(CRYPT_AES_Key *ctx, const uint8_t *key)
     ctx->rounds = 10;  // 10 rounds
 #ifdef HITLS_CRYPTO_AES_PRECALC_TABLES
     SetAesKeyExpansionTbox(ctx, CRYPT_AES_128, key, false);
+#elif defined(HITLS_CRYPTO_AES_CONSTANT_TIME)
+	SetAesKeyExpansionConstantTime(ctx, CRYPT_AES_128, key, false);
 #else
     SetAesKeyExpansionSbox(ctx, CRYPT_AES_128, key);
 #endif
@@ -73,6 +83,8 @@ void SetDecryptKey192(CRYPT_AES_Key *ctx, const uint8_t *key)
     ctx->rounds = 12;  // 12 rounds
 #ifdef HITLS_CRYPTO_AES_PRECALC_TABLES
     SetAesKeyExpansionTbox(ctx, CRYPT_AES_192, key, false);
+#elif defined(HITLS_CRYPTO_AES_CONSTANT_TIME)
+	SetAesKeyExpansionConstantTime(ctx, CRYPT_AES_192, key, false);
 #else
     SetAesKeyExpansionSbox(ctx, CRYPT_AES_192, key);
 #endif
@@ -83,6 +95,8 @@ void SetDecryptKey256(CRYPT_AES_Key *ctx, const uint8_t *key)
     ctx->rounds = 14;  // 14 rounds
 #ifdef HITLS_CRYPTO_AES_PRECALC_TABLES
     SetAesKeyExpansionTbox(ctx, CRYPT_AES_256, key, false);
+#elif defined(HITLS_CRYPTO_AES_CONSTANT_TIME)
+	SetAesKeyExpansionConstantTime(ctx, CRYPT_AES_256, key, false);
 #else
     SetAesKeyExpansionSbox(ctx, CRYPT_AES_256, key);
 #endif
@@ -92,6 +106,8 @@ int32_t CRYPT_AES_Encrypt(const CRYPT_AES_Key *ctx, const uint8_t *in, uint8_t *
 {
 #ifdef HITLS_CRYPTO_AES_PRECALC_TABLES
     CRYPT_AES_EncryptTbox(ctx, in, out, len);
+#elif defined(HITLS_CRYPTO_AES_CONSTANT_TIME)
+	CRYPT_AES_EncryptConstantTime(ctx, in, out, len);
 #else
     CRYPT_AES_EncryptSbox(ctx, in, out, len);
 #endif
@@ -102,6 +118,8 @@ int32_t CRYPT_AES_Decrypt(const CRYPT_AES_Key *ctx, const uint8_t *in, uint8_t *
 {
 #ifdef HITLS_CRYPTO_AES_PRECALC_TABLES
     CRYPT_AES_DecryptTbox(ctx, in, out, len);
+#elif defined(HITLS_CRYPTO_AES_CONSTANT_TIME)
+	CRYPT_AES_DecryptConstantTime(ctx, in, out, len);
 #else
     CRYPT_AES_DecryptSbox(ctx, in, out, len);
 #endif
