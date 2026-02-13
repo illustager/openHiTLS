@@ -2,7 +2,7 @@
     "compileFlag": {
         "CC_USER_DEFINE_FLAGS": {
             "CC_FLAGS_ADD": [
-                "-DHITLS_CRYPTO_AES_TABLES_PRELOAD"
+                "-DHITLS_CRYPTO_SM4_PARALLEL"
             ]
         }
     },
