@@ -993,6 +993,47 @@ uint32_t ReadKBOX_3(uint8_t index)
         KROUND((t), (k3), (k0), (k1), (k2), CK[(i) + 3], sbox, (rk)[(i) + 3]);  \
     }
 
+#ifdef HITLS_CRYPTO_SM4_TABLES_PRELOAD
+static void SM4_PreloadKeyTables(void)
+{
+    // 获取缓存行大小，如果没有相关函数，使用默认值64字节
+    size_t cacheLineSize = 64;
+    
+    // 预加载所有KBOX表到缓存中
+    volatile uint32_t dummy = 0;
+    const uint32_t *tables[] = {KBOX_0, KBOX_1, KBOX_2, KBOX_3};
+    const size_t tableSize = 256; // 每个表有256个元素
+    
+    for (int t = 0; t < 4; t++) {
+        const uint32_t *table = tables[t];
+        for (size_t i = 0; i < tableSize; i += cacheLineSize / sizeof(uint32_t)) {
+            // 访问每个缓存行中的至少一个元素
+            dummy ^= table[i];
+        }
+    }
+    
+    // 预加载CK常数表
+    const size_t ckSize = sizeof(CK) / sizeof(CK[0]);
+    for (size_t i = 0; i < ckSize; i += cacheLineSize / sizeof(uint32_t)) {
+        dummy ^= CK[i];
+    }
+    
+    // 预加载FK常数表
+    const size_t fkSize = sizeof(FK) / sizeof(FK[0]);
+    for (size_t i = 0; i < fkSize; i += cacheLineSize / sizeof(uint32_t)) {
+        dummy ^= FK[i];
+    }
+    
+    // 确保编译器不会优化掉上面的循环
+    (void)dummy;
+    
+    // 内存屏障，确保预加载完成
+    #if defined(__GNUC__)
+    __asm__ __volatile__ ("" : : : "memory");
+    #endif
+}
+#endif
+
 int32_t CRYPT_SM4_SetKey(CRYPT_SM4_Ctx *ctx, const uint8_t *key, uint32_t keyLen)
 {
     if (ctx == NULL || key == NULL) {
@@ -1005,13 +1046,36 @@ int32_t CRYPT_SM4_SetKey(CRYPT_SM4_Ctx *ctx, const uint8_t *key, uint32_t keyLen
         return CRYPT_SM4_ERR_KEY_LEN;
     }
 
+#ifdef HITLS_CRYPTO_SM4_TABLES_PRELOAD
+    SM4_PreloadKeyTables();
+#endif
+
     volatile uint32_t k0, k1, k2, k3;
     volatile uint32_t t;
+
+#ifdef HITLS_CRYPTO_SM4_TABLES_PRELOAD
+    volatile uint32_t protection_var = 0;
+    protection_var ^= KBOX_0[0] ^ KBOX_0[255];
+    protection_var ^= KBOX_1[0] ^ KBOX_1[255];
+    protection_var ^= KBOX_2[0] ^ KBOX_2[255];
+    protection_var ^= KBOX_3[0] ^ KBOX_3[255];
+    protection_var ^= CK[0] ^ CK[31];
+    protection_var ^= FK[0] ^ FK[3];
+    (void)protection_var;
+#endif
+
     k0 = GET_UINT32_BE(key, 0) ^ FK[0];     // k0: 4 bytes starting from the 0th index of the key⊕FK[0]
     k1 = GET_UINT32_BE(key, 4) ^ FK[1];     // k1: 4 bytes starting from the 4th index of the key⊕FK[1]
     k2 = GET_UINT32_BE(key, 8) ^ FK[2];     // k2: 4 bytes starting from the 8th index of the key⊕FK[2]
     k3 = GET_UINT32_BE(key, 12) ^ FK[3];    // k3: 4 bytes starting from the 12th index of the key⊕FK[3]
     KROUND_FUNCTION(t, k0, k1, k2, k3, KBOX, ctx->rk);
+
+#ifdef HITLS_CRYPTO_SM4_TABLES_PRELOAD
+    volatile uint32_t post_protection = 0;
+    post_protection ^= KBOX_0[128] ^ KBOX_1[128] ^ KBOX_2[128] ^ KBOX_3[128];
+    (void)post_protection;
+#endif
+
     k0 = 0;
     k1 = 0;
     k2 = 0;
