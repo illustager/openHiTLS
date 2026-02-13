@@ -1347,6 +1347,70 @@ static const uint32_t TD3[256] = {
 };
 
 #ifndef HITLS_CRYPTO_AES_PRECALC_TABLES_PARALLEL
+#ifdef HITLS_CRYPTO_AES_TABLES_PRELOAD
+
+static uint32_t GetCacheLineSize(void) {
+	return 64; // default value
+}
+
+static void PreloadENCTablesForCacheProtection(void) {    
+    uint32_t cacheLineSize = GetCacheLineSize();
+    volatile uint32_t u = 0;
+    uint32_t i;
+    
+    for (i = 0; i < sizeof(TE0); i += cacheLineSize) {
+        u &= *(const volatile uint32_t *)((const volatile uint8_t *)TE0 + i);
+    }
+    for (i = 0; i < sizeof(TE1); i += cacheLineSize) {
+        u &= *(const volatile uint32_t *)((const volatile uint8_t *)TE1 + i);
+    }
+    for (i = 0; i < sizeof(TE2); i += cacheLineSize) {
+        u &= *(const volatile uint32_t *)((const volatile uint8_t *)TE2 + i);
+    }
+    for (i = 0; i < sizeof(TE3); i += cacheLineSize) {
+        u &= *(const volatile uint32_t *)((const volatile uint8_t *)TE3 + i);
+    }
+    
+    u &= TE0[255];
+    u &= TE1[255];
+    u &= TE2[255];
+    u &= TE3[255];
+    
+    (void)u;
+}
+
+static void PreloadDECTablesForCacheProtection(void) {
+    uint32_t cacheLineSize = GetCacheLineSize();
+    volatile uint32_t u = 0;
+    uint32_t i;
+	
+	for (i = 0; i < sizeof(TD0); i += cacheLineSize) {
+        u &= *(const volatile uint32_t *)((const volatile uint8_t *)TD0 + i);
+    }
+    for (i = 0; i < sizeof(TD1); i += cacheLineSize) {
+        u &= *(const volatile uint32_t *)((const volatile uint8_t *)TD1 + i);
+    }
+    for (i = 0; i < sizeof(TD2); i += cacheLineSize) {
+        u &= *(const volatile uint32_t *)((const volatile uint8_t *)TD2 + i);
+    }
+    for (i = 0; i < sizeof(TD3); i += cacheLineSize) {
+        u &= *(const volatile uint32_t *)((const volatile uint8_t *)TD3 + i);
+    }
+    
+    for (i = 0; i < sizeof(INV_S); i += cacheLineSize) {
+        u &= *(const volatile uint32_t *)((const volatile uint8_t *)INV_S + i);
+    }
+
+	u &= TD0[255];
+    u &= TD1[255];
+    u &= TD2[255];
+    u &= TD3[255];
+    u &= INV_S[255];
+
+	(void)u;
+}
+
+#endif
 
 static void SetDecryptKeyTbox(CRYPT_AES_Key *ctx)
 {
@@ -1564,7 +1628,22 @@ void CRYPT_AES_EncryptTbox(const CRYPT_AES_Key *ctx, const uint8_t *in, uint8_t 
     const uint32_t *ekey = ctx->key;
     uint32_t c0, c1, c2, c3, t0, t1, t2, t3;
 
+#ifdef HITLS_CRYPTO_AES_TABLES_PRELOAD
+	PreloadENCTablesForCacheProtection();
+#endif
+
     AES_ROUND_INIT(in, c, e);
+
+#ifdef HITLS_CRYPTO_AES_TABLES_PRELOAD
+	uint32_t cacheLineSize = GetCacheLineSize();
+    volatile uint32_t u = 0;
+    uint32_t i;
+    for (i = 0; i < sizeof(TE0); i += cacheLineSize) {
+        u &= *(const volatile uint32_t *)((const volatile uint8_t *)TE0 + i);
+    }
+    u &= TE0[255];
+    c0 |= u; c1 |= u; c2 |= u; c3 |= u;
+#endif
 
     AES_ENC_ROUND(c, t, 1, ekey);
     AES_ENC_ROUND(t, c, 2, ekey);
@@ -1621,7 +1700,23 @@ void CRYPT_AES_DecryptTbox(const CRYPT_AES_Key *ctx, const uint8_t *in, uint8_t 
     uint32_t p0, p1, p2, p3, t0, t1, t2, t3;
 
     // Initialize p0. The dkey starts from the end of the key.
+    
+#ifdef HITLS_CRYPTO_AES_TABLES_PRELOAD
+	PreloadDECTablesForCacheProtection();
+#endif
+
     AES_ROUND_INIT(in, p, d);
+
+#ifdef HITLS_CRYPTO_AES_TABLES_PRELOAD
+	uint32_t cacheLineSize = GetCacheLineSize();
+    volatile uint32_t u = 0;
+    uint32_t i;
+    for (i = 0; i < sizeof(TD0); i += cacheLineSize) {
+        u &= *(const volatile uint32_t *)((const volatile uint8_t *)TD0 + i);
+    }
+    u &= TD0[255];
+    p0 |= u; p1 |= u; p2 |= u; p3 |= u;
+#endif
 
     dkey = ctx->key;
 
