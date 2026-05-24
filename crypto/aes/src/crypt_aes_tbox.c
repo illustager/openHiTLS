@@ -1660,4 +1660,6 @@ void CRYPT_AES_DecryptTbox(const CRYPT_AES_Key *ctx, const uint8_t *in, uint8_t 
     BSL_SAL_CleanseData(&p3, sizeof(uint32_t));
 }
 
+#endif /* HITLS_CRYPTO_AES_PRECALC_TABLES */
+
 #endif /* HITLS_CRYPTO_AES && HITLS_CRYPTO_AES_PRECALC_TABLES */
